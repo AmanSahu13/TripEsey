@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EasyTrip - Smart Multi-Language Trip Manager</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              900: '#134e4a',
+            },
+            accent: {
+              500: '#6366f1',
+              600: '#4f46e5',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen pb-20 md:pb-6 flex flex-col antialiased">
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-30 bg-slate-800/95 backdrop-blur-md border-b border-slate-700/80 px-3 sm:px-4 py-2.5">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
+      
+      <!-- LOGO & TRIP SELECTOR -->
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-500 to-accent-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-brand-500/20 shrink-0">
+          <i class="fa-solid fa-plane-departure"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-black tracking-wider text-brand-400 uppercase">EasyTrip</span>
+            <span id="syncStatusBadge" class="text-[9px] px-1.5 py-0.2 rounded font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="syncStatusText">Live Synced</span>
+            </span>
+          </div>
+          <select id="tripSelect" onchange="switchTrip(this.value)" class="bg-slate-900 text-slate-100 text-xs font-bold rounded-lg px-2 py-0.5 border border-slate-700 focus:outline-none focus:border-brand-500 max-w-[120px] sm:max-w-[170px] truncate">
+            <!-- Dynamic Options -->
+          </select>
+        </div>
+      </div>
+
+      <!-- LANGUAGE SELECTOR & ACTIONS -->
+      <div class="flex items-center gap-1.5">
+        <button onclick="openModal('newTripModal')" class="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-700 hover:bg-slate-600 active:scale-95 transition text-xs font-semibold rounded-lg text-slate-200 border border-slate-600 flex items-center gap-1">
+          <i class="fa-solid fa-plus text-brand-400"></i>
+          <span class="hidden sm:inline" data-i18n="newTripBtn">New Trip</span>
+        </button>
+
+        <!-- DEFAULT LANGUAGE SELECTOR SET TO ENGLISH -->
+        <div class="relative">
+          <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-slate-900 text-brand-400 text-xs font-bold rounded-lg px-2 py-1.5 border border-brand-500/40 focus:outline-none focus:border-brand-500">
+            <option value="en" selected>🇬🇧 English</option>
+            <option value="hi">🇮🇳 हिंदी</option>
+            <option value="hinglish">🔤 Hinglish</option>
+          </select>
+        </div>
+
+        <button onclick="toggleCalculator()" class="p-2 sm:px-2.5 sm:py-1.5 bg-amber-600/90 hover:bg-amber-500 active:scale-95 transition text-xs font-semibold rounded-lg flex items-center gap-1 text-white shadow-md shadow-amber-600/20">
+          <i class="fa-solid fa-calculator"></i>
+          <span class="hidden sm:inline" data-i18n="calculator">Calculator</span>
+        </button>
+
+        <button onclick="openModal('shareModal')" class="p-2 sm:px-2.5 sm:py-1.5 bg-brand-600 hover:bg-brand-500 active:scale-95 transition text-xs font-semibold rounded-lg text-white flex items-center gap-1 shadow-md shadow-brand-600/30">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span class="hidden sm:inline" data-i18n="inviteBtn">Share & Live Sync</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-6xl mx-auto w-full px-3 sm:px-6 pt-3 flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
+
+    <!-- SIDEBAR METRICS -->
+    <aside class="md:col-span-4 lg:col-span-3 space-y-3">
+      
+      <!-- TRIP SUMMARY CARD -->
+      <div class="bg-slate-800/80 rounded-2xl p-3.5 border border-slate-700/60 shadow-xl relative overflow-hidden">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <h2 id="tripNameDisplay" class="font-extrabold text-base text-white truncate max-w-[170px]">No Active Trip</h2>
+            <p id="tripDatesDisplay" class="text-[11px] text-slate-400">0 Members</p>
+          </div>
+          <button onclick="openModal('membersModal')" class="text-[11px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded-md border border-slate-600 transition">
+            <i class="fa-solid fa-users text-brand-400"></i> <span data-i18n="membersBtn">Members</span>
+          </button>
+        </div>
+
+        <div class="bg-slate-900/90 p-2 rounded-xl border border-slate-700/80 my-2 text-[11px]">
+          <span class="text-slate-400 block text-[9px] uppercase font-bold" data-i18n="handlerModeLabel">Money Management Mode</span>
+          <div class="flex items-center justify-between mt-0.5">
+            <span id="handlerModeBadge" class="font-bold text-amber-300 flex items-center gap-1">
+              <i class="fa-solid fa-user-shield"></i> <span id="handlerModeText">Single Cashier</span>
+            </span>
+            <button onclick="openModal('tripSettingsModal')" class="text-[10px] text-brand-400 hover:underline" data-i18n="changeBtn">Change</button>
+          </div>
+          <p id="primaryHandlerDisplay" class="text-[10px] text-slate-300 mt-1">Manager: <b class="text-white">-</b></p>
+        </div>
+
+        <div class="space-y-1.5 pt-1 border-t border-slate-700/50 text-xs">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-400" data-i18n="collectedPoolLabel">Collected Pool:</span>
+            <span id="collectedPoolDisplay" class="font-bold text-emerald-400">₹0</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-slate-400" data-i18n="totalSpentLabel">Total Spent:</span>
+            <span id="totalSpendDisplay" class="font-bold text-brand-400">₹0</span>
+          </div>
+          <div class="flex justify-between items-center pt-1 border-t border-slate-700/40">
+            <span class="text-slate-300 font-medium" data-i18n="remPoolLabel">Remaining Pool:</span>
+            <span id="remainingPoolDisplay" class="font-extrabold text-white text-sm">₹0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- POOL BALANCES -->
+      <div class="bg-slate-800/80 rounded-2xl p-3 border border-slate-700/60 shadow-xl space-y-2.5">
+        <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <span data-i18n="poolStatusTitle">Pool Fund Status</span>
+          <i class="fa-solid fa-vault text-brand-400"></i>
+        </h3>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-slate-900/90 p-2 rounded-xl border border-emerald-500/30">
+            <div class="flex items-center gap-1 text-[10px] text-emerald-400 font-bold uppercase">
+              <i class="fa-solid fa-money-bill-wave"></i> <span data-i18n="cashLabel">Cash Box</span>
+            </div>
+            <span id="cashBoxBalance" class="block font-black text-xs text-slate-100 mt-1">₹0</span>
+            <span id="cashBoxSubtext" class="text-[9px] text-slate-400 block truncate" data-i18n="remSubtext">Remaining</span>
+          </div>
+
+          <div class="bg-slate-900/90 p-2 rounded-xl border border-indigo-500/30">
+            <div class="flex items-center gap-1 text-[10px] text-indigo-400 font-bold uppercase">
+              <i class="fa-solid fa-qrcode"></i> <span data-i18n="onlineLabel">Digital (UPI)</span>
+            </div>
+            <span id="onlineBoxBalance" class="block font-black text-xs text-slate-100 mt-1">₹0</span>
+            <span id="onlineBoxSubtext" class="text-[9px] text-slate-400 block truncate" data-i18n="remSubtext">Remaining</span>
+          </div>
+        </div>
+
+        <div id="poolStatusBadge" class="p-1.5 rounded-lg text-center text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          ✅ Pool Money Active
+        </div>
+      </div>
+
+      <!-- DESKTOP NAV -->
+      <nav class="hidden md:flex flex-col gap-1 bg-slate-800/50 p-2 rounded-2xl border border-slate-700/60">
+        <button onclick="setActiveTab('expenses')" id="deskTab-expenses" class="nav-desk-btn flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition text-left bg-brand-600 text-white">
+          <i class="fa-solid fa-receipt w-4 text-center"></i> <span data-i18n="tabExpenses">All Expenses</span>
+        </button>
+        <button onclick="setActiveTab('pool')" id="deskTab-pool" class="nav-desk-btn flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition text-left text-slate-400 hover:bg-slate-700/50">
+          <i class="fa-solid fa-piggy-bank w-4 text-center"></i> <span data-i18n="tabPool">Pool Money Log</span>
+        </button>
+        <button onclick="setActiveTab('driver')" id="deskTab-driver" class="nav-desk-btn flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition text-left text-slate-400 hover:bg-slate-700/50">
+          <i class="fa-solid fa-truck-monster w-4 text-center"></i> <span data-i18n="tabDriver">Driver & Tolls</span>
+        </button>
+        <button onclick="setActiveTab('balances')" id="deskTab-balances" class="nav-desk-btn flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition text-left text-slate-400 hover:bg-slate-700/50">
+          <i class="fa-solid fa-hand-holding-dollar w-4 text-center"></i> <span data-i18n="tabSettle">Settlements & Refunds</span>
+        </button>
+      </nav>
+
+    </aside>
+
+    <!-- CONTENT DISPLAY AREA -->
+    <section class="md:col-span-8 lg:col-span-9 space-y-3">
+
+      <!-- QUICK CHIPS -->
+      <div class="bg-gradient-to-r from-slate-800 to-slate-800/90 p-3 rounded-2xl border border-brand-500/30 shadow-lg space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold text-brand-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-bolt text-amber-400"></i> <span data-i18n="quickPickTitle">Quick Express Pick (1-Tap Entry)</span>
+          </span>
+          <span class="text-[10px] text-slate-400" data-i18n="quickPickSubtext">Select item ➔ Enter amount</span>
+        </div>
+
+        <div id="quickChipsContainer" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <!-- Dynamic Chips -->
+        </div>
+      </div>
+
+      <!-- TAB 1: ALL EXPENSES -->
+      <div id="tabContent-expenses" class="tab-pane space-y-3">
+        <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60">
+          <div class="relative flex-1">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+            <input type="text" id="expenseSearch" oninput="renderExpenses()" placeholder="Search expenses..." class="w-full bg-slate-900 text-slate-200 text-xs rounded-lg pl-8 pr-3 py-1.5 border border-slate-700 focus:outline-none focus:border-brand-500">
+          </div>
+          <div class="flex gap-2">
+            <select id="modeFilter" onchange="renderExpenses()" class="bg-slate-900 text-slate-300 text-xs rounded-lg px-2 py-1.5 border border-slate-700 focus:outline-none focus:border-brand-500">
+              <option value="ALL">All Modes (Cash + Online)</option>
+              <option value="CASH">💵 Cash Only</option>
+              <option value="ONLINE">📱 Online Only</option>
+            </select>
+            <button onclick="openModal('addExpenseModal')" class="bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md whitespace-nowrap">
+              <i class="fa-solid fa-plus"></i> <span data-i18n="newExpenseBtn">New Expense</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="expensesList" class="space-y-2">
+          <!-- Dynamic Expense Cards -->
+        </div>
+      </div>
+
+      <!-- TAB 2: POOL LOG -->
+      <div id="tabContent-pool" class="tab-pane hidden space-y-3">
+        <div class="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/60 space-y-2.5">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="font-bold text-white text-sm" data-i18n="poolLedgerTitle">Central Pool Ledger</h3>
+              <p class="text-[11px] text-slate-400" data-i18n="poolLedgerSub">Money contributed upfront by members</p>
+            </div>
+            <button onclick="openModal('addFundModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1">
+              <i class="fa-solid fa-plus"></i> <span data-i18n="addFundBtn">Add Pool Money</span>
+            </button>
+          </div>
+
+          <div id="fundContributionsList" class="space-y-2 pt-1">
+            <!-- Dynamic Fund Items -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: DRIVER LEDGER -->
+      <div id="tabContent-driver" class="tab-pane hidden space-y-3">
+        <div class="bg-gradient-to-r from-amber-950/40 to-slate-800 p-3.5 rounded-2xl border border-amber-500/30">
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="inline-block px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[9px] font-bold uppercase tracking-wider mb-1" data-i18n="driverTag">Vehicle & Driver Log</span>
+              <h3 class="text-sm font-bold text-white" data-i18n="driverHeading">Driver, Fuel & Toll Charges</h3>
+              <p class="text-[11px] text-slate-400 mt-0.5" data-i18n="driverSub">Advances paid to cab or driver</p>
+            </div>
+            <i class="fa-solid fa-truck-pickup text-2xl text-amber-500/40"></i>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 pt-2.5 border-t border-slate-700/60">
+            <div>
+              <span class="text-[10px] text-slate-400 block" data-i18n="totalDriverPaid">Total Driver Cost</span>
+              <span id="driverTotalPaidCard" class="text-sm font-extrabold text-amber-400">₹0</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block" data-i18n="entriesCount">Entries Count</span>
+              <span id="driverEntriesCount" class="text-sm font-extrabold text-slate-200">0</span>
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <button onclick="openDriverExpenseModal()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs py-1.5 px-3 rounded-lg transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-plus"></i> <span data-i18n="logDriverBtn">Log Entry</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="driverLogList" class="space-y-2">
+          <!-- Dynamic Driver Entries -->
+        </div>
+      </div>
+
+      <!-- TAB 4: SETTLEMENTS -->
+      <div id="tabContent-balances" class="tab-pane hidden space-y-3">
+        <div class="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/60">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5" data-i18n="settlementTitle">Member Balances & Pool Refunds</h3>
+          <div id="membersBalanceGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <!-- Dynamic Member Cards -->
+          </div>
+        </div>
+
+        <div class="bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/60">
+          <div class="flex items-center justify-between mb-2.5">
+            <div>
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider" data-i18n="whoPaysWhomTitle">Settlement Steps (Who Pays Whom)</h3>
+              <p class="text-[10px] text-slate-400" data-i18n="whoPaysWhomSub">Exact transactions required to settle dues</p>
+            </div>
+            <span class="text-[10px] bg-brand-500/10 text-brand-400 border border-brand-500/20 px-2 py-0.5 rounded font-semibold" data-i18n="smartSplitBadge">Smart Split</span>
+          </div>
+
+          <div id="settlementsList" class="space-y-2">
+            <!-- Dynamic Settlements -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- QUICK CALCULATOR WIDGET -->
+  <div id="quickCalculatorWidget" class="fixed bottom-16 right-3 sm:right-6 z-40 bg-slate-800 border border-slate-700 rounded-2xl p-3 w-64 shadow-2xl transition-all duration-300 transform translate-y-full opacity-0 pointer-events-none">
+    <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-slate-700">
+      <span class="text-xs font-extrabold text-amber-400 flex items-center gap-1">
+        <i class="fa-solid fa-calculator"></i> <span data-i18n="quickCalcTitle">Quick Calculator</span>
+      </span>
+      <button onclick="toggleCalculator()" class="text-slate-400 hover:text-white text-xs">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div id="calcDisplay" class="bg-slate-900 border border-slate-700 rounded-xl p-2 text-right font-mono font-bold text-lg text-emerald-400 mb-2 truncate">
+      0
+    </div>
+
+    <div class="grid grid-cols-4 gap-1.5 text-xs font-bold text-slate-100">
+      <button onclick="calcInput('C')" class="p-2 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30">C</button>
+      <button onclick="calcInput('/')" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600">÷</button>
+      <button onclick="calcInput('*')" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600">×</button>
+      <button onclick="calcInput('-')" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600">-</button>
+
+      <button onclick="calcInput('7')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">7</button>
+      <button onclick="calcInput('8')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">8</button>
+      <button onclick="calcInput('9')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">9</button>
+      <button onclick="calcInput('+')" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600">+</button>
+
+      <button onclick="calcInput('4')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">4</button>
+      <button onclick="calcInput('5')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">5</button>
+      <button onclick="calcInput('6')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">6</button>
+      <button onclick="calcEquals()" class="row-span-2 p-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white flex items-center justify-center">=</button>
+
+      <button onclick="calcInput('1')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">1</button>
+      <button onclick="calcInput('2')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">2</button>
+      <button onclick="calcInput('3')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">3</button>
+
+      <button onclick="calcInput('0')" class="col-span-2 p-2 rounded-lg bg-slate-900 hover:bg-slate-700">0</button>
+      <button onclick="calcInput('.')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-700">.</button>
+    </div>
+
+    <button onclick="transferCalcToExpense()" class="w-full mt-2 bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold py-1.5 rounded-xl transition flex items-center justify-center gap-1">
+      <i class="fa-solid fa-arrow-right-to-bracket"></i> <span data-i18n="calcTransferBtn">Transfer to Expense</span>
+    </button>
+  </div>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <div class="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-slate-800/95 backdrop-blur-lg border-t border-slate-700/80 px-2 py-1 flex justify-around items-center">
+    <button onclick="setActiveTab('expenses')" id="mobTab-expenses" class="nav-mob-btn flex flex-col items-center gap-0.5 py-1 px-2 text-brand-400">
+      <i class="fa-solid fa-receipt text-sm"></i>
+      <span class="text-[9px] font-medium" data-i18n="tabExpenses">Expenses</span>
+    </button>
+    <button onclick="setActiveTab('pool')" id="mobTab-pool" class="nav-mob-btn flex flex-col items-center gap-0.5 py-1 px-2 text-slate-400">
+      <i class="fa-solid fa-piggy-bank text-sm"></i>
+      <span class="text-[9px] font-medium" data-i18n="tabPool">Pool</span>
+    </button>
+
+    <button onclick="openModal('addExpenseModal')" class="w-11 h-11 -mt-5 rounded-full bg-gradient-to-tr from-brand-500 to-accent-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/40 active:scale-90 transition">
+      <i class="fa-solid fa-plus text-lg"></i>
+    </button>
+
+    <button onclick="setActiveTab('driver')" id="mobTab-driver" class="nav-mob-btn flex flex-col items-center gap-0.5 py-1 px-2 text-slate-400">
+      <i class="fa-solid fa-truck-monster text-sm"></i>
+      <span class="text-[9px] font-medium" data-i18n="tabDriver">Driver</span>
+    </button>
+    <button onclick="setActiveTab('balances')" id="mobTab-balances" class="nav-mob-btn flex flex-col items-center gap-0.5 py-1 px-2 text-slate-400">
+      <i class="fa-solid fa-scale-balanced text-sm"></i>
+      <span class="text-[9px] font-medium" data-i18n="tabSettle">Settlements</span>
+    </button>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- MODAL 0: NEW TRIP -->
+  <div id="newTripModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl my-auto">
+      <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+        <h3 class="font-bold text-white text-sm" data-i18n="createTripTitle">Create New Trip</h3>
+        <button onclick="closeModal('newTripModal')" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form onsubmit="createNewTrip(event)" class="p-4 space-y-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="newTripNameLabel">Trip Name *</label>
+          <input type="text" id="newTripName" required placeholder="e.g. Goa Trip, Manali 2026" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="membersListInputLabel">Members Names (Comma Separated) *</label>
+          <input type="text" id="newTripMembersInput" required placeholder="e.g. Rahul, Priya, Amit" class="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-700 space-y-2">
+          <label class="block text-[11px] font-bold text-amber-300" data-i18n="onboardingHandlerQuestion">Who will handle the total money? *</label>
+          
+          <div class="space-y-1.5">
+            <label class="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
+              <input type="radio" name="newTripHandlerMode" value="SINGLE" checked class="accent-brand-500">
+              <span data-i18n="optionSingleHandler">👤 Single person handles all cash/UPI (Single Cashier)</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-slate-200 cursor-pointer">
+              <input type="radio" name="newTripHandlerMode" value="GROUP" class="accent-brand-500">
+              <span data-i18n="optionGroupHandler">👥 Everyone spends together (Group Multi-Spender)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-700/60">
+          <button type="button" onclick="closeModal('newTripModal')" class="px-3 py-1.5 bg-slate-700 text-slate-300 rounded-xl text-xs font-bold" data-i18n="cancelBtn">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-md" data-i18n="createTripConfirmBtn">Start Trip</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 1: ADD/EDIT EXPENSE -->
+  <div id="addExpenseModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl my-auto">
+      
+      <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+        <h3 id="expenseModalTitle" class="font-bold text-white text-sm" data-i18n="addExpenseModalTitle">Log New Expense</h3>
+        <button onclick="closeModal('addExpenseModal')" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form id="expenseForm" onsubmit="saveExpense(event)" class="p-4 space-y-3">
+        <input type="hidden" id="expenseId">
+
+        <div class="grid grid-cols-12 gap-2">
+          <div class="col-span-7">
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="expenseTitleLabel">Expense Title *</label>
+            <input type="text" id="expenseTitle" required placeholder="e.g. Auto fare, Lunch" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-brand-500">
+          </div>
+          <div class="col-span-5">
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="amountLabel">Amount (₹) *</label>
+            <input type="number" step="0.01" id="expenseAmount" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 text-slate-100 font-bold rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/80">
+          <div>
+            <label class="block text-[10px] font-semibold text-amber-300 mb-1" data-i18n="sourceLabel">Payment Source *</label>
+            <select id="expenseSource" onchange="togglePaidByDropdown()" required class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand-500 font-semibold">
+              <option value="POOL" data-i18n-opt="srcPool">🏦 Trip Pool Fund</option>
+              <option value="INDIVIDUAL" data-i18n-opt="srcIndiv">👤 Out of Pocket</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-[10px] font-semibold text-amber-300 mb-1" data-i18n="modeLabel">Payment Mode *</label>
+            <select id="expenseMode" required class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand-500 font-semibold">
+              <option value="CASH" data-i18n-opt="modeCash">💵 Cash Box</option>
+              <option value="ONLINE" data-i18n-opt="modeOnline">📱 Online (UPI / Card)</option>
+            </select>
+          </div>
+
+          <div id="paidByContainer" class="col-span-2 pt-1">
+            <label id="paidByLabelEl" class="block text-[10px] font-semibold text-slate-300 mb-1" data-i18n="handledByLabel">Handled / Paid By *</label>
+            <select id="expensePaidBy" required class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand-500">
+              <!-- Dynamic members -->
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="categoryLabel">Category</label>
+            <select id="expenseCategory" required class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500">
+              <option value="Transport" data-i18n-opt="catTransport">⛽ Transport / Auto</option>
+              <option value="Food" data-i18n-opt="catFood">🍽️ Food / Dining</option>
+              <option value="Driver" data-i18n-opt="catDriver">🚗 Driver / Tolls</option>
+              <option value="Stay" data-i18n-opt="catStay">🏨 Hotel / Stay</option>
+              <option value="Activities" data-i18n-opt="catActivities">🎟️ Activities</option>
+              <option value="Misc" data-i18n-opt="catMisc">🛒 Supplies / Misc</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-1.5 pt-4">
+            <input type="checkbox" id="expenseIsDriver" class="w-4 h-4 rounded accent-brand-500">
+            <label for="expenseIsDriver" class="text-[11px] text-amber-300 font-medium" data-i18n="driverCheckLabel">Driver / Vehicle Cost</label>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-[11px] font-semibold text-slate-300" data-i18n="splitInLabel">Split Amongst:</label>
+            <button type="button" onclick="selectAllSplitMembers(true)" class="text-[10px] text-brand-400 hover:underline" data-i18n="selectAllBtn">Select All</button>
+          </div>
+          <div id="splitMembersCheckboxes" class="grid grid-cols-2 gap-1.5 bg-slate-900 p-2 rounded-xl border border-slate-700 max-h-28 overflow-y-auto">
+            <!-- Dynamic checkboxes -->
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-700/60">
+          <button type="button" onclick="closeModal('addExpenseModal')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-xs font-bold" data-i18n="cancelBtn">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-md" data-i18n="saveBtn">Save Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ADD POOL MONEY -->
+  <div id="addFundModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+        <h3 class="font-bold text-white text-sm" data-i18n="addFundModalTitle">Add Pool Money</h3>
+        <button onclick="closeModal('addFundModal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form onsubmit="saveFundContribution(event)" class="p-4 space-y-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="contributorLabel">Contributing Member *</label>
+          <select id="fundContributor" required class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-500">
+            <!-- Dynamic Member List -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="amountLabel">Amount (₹) *</label>
+            <input type="number" step="0.01" id="fundAmount" required placeholder="2000" class="w-full bg-slate-900 border border-slate-700 text-slate-100 font-bold rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="modeLabel">Payment Mode *</label>
+            <select id="fundMode" required class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-bold">
+              <option value="CASH" data-i18n-opt="modeCash">💵 Cash Box</option>
+              <option value="ONLINE" data-i18n-opt="modeOnline">📱 Online (UPI)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="notesLabel">Notes / Remarks</label>
+          <input type="text" id="fundNotes" placeholder="e.g. Initial pool deposit" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-700/60">
+          <button type="button" onclick="closeModal('addFundModal')" class="px-3 py-1.5 bg-slate-700 text-slate-300 rounded-xl text-xs font-bold" data-i18n="cancelBtn">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold" data-i18n="addToPoolBtn">Add to Pool</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: HANDLER SETTINGS -->
+  <div id="tripSettingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+        <h3 class="font-bold text-white text-sm" data-i18n="tripSettingsModalTitle">Money Handler Settings</h3>
+        <button onclick="closeModal('tripSettingsModal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <form onsubmit="saveTripSettings(event)" class="p-4 space-y-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="handlerModeSelectLabel">Who will handle the total money? *</label>
+          <select id="settingHandlerMode" onchange="toggleHandlerMemberSelect()" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-500 font-bold">
+            <option value="SINGLE" data-i18n-opt="optSingleCashier">👤 Single Cashier handles all cash/UPI</option>
+            <option value="GROUP" data-i18n-opt="optGroupMode">👥 Everyone spends (Group Multi-Spender)</option>
+          </select>
+        </div>
+
+        <div id="primaryHandlerSelectContainer">
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1" data-i18n="primaryHandlerSelectLabel">Select Primary Cashier / Manager *</label>
+          <select id="settingPrimaryHandler" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-500">
+            <!-- Dynamic members -->
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-700/60">
+          <button type="button" onclick="closeModal('tripSettingsModal')" class="px-3 py-1.5 bg-slate-700 text-slate-300 rounded-xl text-xs font-bold" data-i18n="cancelBtn">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold" data-i18n="saveBtn">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: MEMBERS MANAGEMENT -->
+  <div id="membersModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+        <h3 class="font-bold text-white text-sm" data-i18n="membersModalTitle">Trip Members</h3>
+        <button onclick="closeModal('membersModal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+      
+      <div class="p-4 space-y-3">
+        <div class="flex gap-2">
+          <input type="text" id="newMemberName" placeholder="Enter member name" class="flex-1 bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-500">
+          <button onclick="addMember()" class="bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl" data-i18n="addBtn">Add</button>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider" data-i18n="currentMembersLabel">Current Members</label>
+          <div id="membersList" class="space-y-1 max-h-48 overflow-y-auto">
+            <!-- Dynamic Member List -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: SHARE / EMAIL INVITE -->
+  <div id="shareModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+        <h3 class="font-bold text-white text-sm" data-i18n="shareModalTitle">Share Trip & Invite via Email</h3>
+        <button onclick="closeModal('shareModal')" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-3">
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-brand-500/30 space-y-2">
+          <label class="block text-xs font-bold text-brand-400" data-i18n="inviteEmailLabel">Invite member via Email:</label>
+          <div class="flex gap-1.5">
+            <input type="email" id="inviteMemberEmail" placeholder="e.g. friend@gmail.com" class="flex-1 bg-slate-800 border border-slate-700 text-slate-100 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand-500">
+            <button onclick="sendEmailInvite()" class="bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1">
+              <i class="fa-solid fa-paper-plane"></i> <span data-i18n="sendInviteBtn">Invite</span>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400" data-i18n="inviteSubtext">All connected members can view and update expenses simultaneously in real-time!</p>
+        </div>
+
+        <textarea id="shareTextarea" readonly class="w-full h-36 bg-slate-900 border border-slate-700 text-slate-200 text-xs font-mono p-2.5 rounded-xl focus:outline-none resize-none"></textarea>
+
+        <div class="flex flex-wrap gap-2 justify-end">
+          <button onclick="copyShareSummary()" id="copyShareBtn" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl flex items-center gap-1">
+            <i class="fa-solid fa-copy"></i> <span data-i18n="copyTextBtn">Copy Text</span>
+          </button>
+          <button onclick="exportCSV()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1">
+            <i class="fa-solid fa-file-csv"></i> <span data-i18n="csvDownloadBtn">Download CSV</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: DELETE CONFIRMATION -->
+  <div id="deleteConfirmModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-red-500/40 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-center p-5 space-y-3">
+      <div class="w-12 h-12 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mx-auto text-xl">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      
+      <h3 class="font-extrabold text-white text-base" data-i18n="confirmDeleteTitle">Are you sure you want to delete?</h3>
+      
+      <p id="deleteConfirmDetails" class="text-xs text-slate-300 bg-slate-900 p-2.5 rounded-xl border border-slate-700/80">
+        This record will be permanently deleted.
+      </p>
+
+      <div class="flex justify-center gap-2 pt-2">
+        <button onclick="closeModal('deleteConfirmModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-xl" data-i18n="cancelBtn">
+          Cancel
+        </button>
+        <button onclick="executePendingDelete()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-red-600/30" data-i18n="confirmDeleteBtn">
+          Yes, Delete Item
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="customToast" class="fixed bottom-16 md:bottom-6 right-4 z-50 bg-slate-800 border border-slate-700 text-slate-100 px-3.5 py-2 rounded-xl shadow-2xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-brand-400 text-sm"></i>
+    <span id="toastMessage" class="text-xs font-semibold">Action completed</span>
+  </div>
+
+  <!-- FIREBASE SCRIPTS -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+    import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'easytrip-shared-v7';
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let activeUnsubscribe = null;
+
+    try {
+      if (typeof __firebase_config !== 'undefined') {
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        const initAuth = async () => {
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } else {
+            await signInAnonymously(auth);
+          }
+        };
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+          currentUser = user;
+          if (user && window.currentTripId) {
+            window.listenToCloudTrip(window.currentTripId);
+          }
+        });
+      }
+    } catch(e) {
+      console.warn("Firebase Init Deferred:", e);
+    }
+
+    window.syncTripToCloud = async function(trip) {
+      if (!db || !currentUser || !trip) return;
+      try {
+        const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', trip.id);
+        await setDoc(tripRef, trip, { merge: true });
+        const badgeText = document.getElementById('syncStatusText');
+        if (badgeText) badgeText.innerText = window.currentLang === 'en' ? 'Live Synced' : 'लाइव सिंक';
+      } catch(e) {
+        console.error("Firestore sync error:", e);
+      }
+    };
+
+    window.listenToCloudTrip = function(tripId) {
+      if (!db || !currentUser || !tripId) return;
+      if (activeUnsubscribe) activeUnsubscribe();
+
+      const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', tripId);
+      activeUnsubscribe = onSnapshot(tripRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const cloudTrip = docSnap.data();
+          const idx = window.trips.findIndex(t => t.id === tripId);
+          if (idx !== -1) {
+            window.trips[idx] = cloudTrip;
+          } else {
+            window.trips.push(cloudTrip);
+          }
+          window.saveStateLocally();
+          window.renderAll();
+        }
+      }, (err) => {
+        console.error("Firestore listener error:", err);
+      });
+    };
+  </script>
+
+  <script src="app.js"></script>
+</body>
+</html>
